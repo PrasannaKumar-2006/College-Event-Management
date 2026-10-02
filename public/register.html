@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Registration | CampusEvents</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <span class="brand-icon">🎓</span>
+                <span>CampusEvents</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/index.html">Upcoming Events</a></li>
+                <span id="navAuthLinks">
+                    <li><a href="/login.html" class="btn btn-outline btn-sm">Login</a></li>
+                    <li><a href="/register.html" class="btn btn-primary btn-sm active">Register</a></li>
+                </span>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Register Content -->
+    <main class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2>Create Student Account</h2>
+                <p>Register to book seats for college events and workshops</p>
+            </div>
+
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" class="form-control" placeholder="e.g. Priya Patel" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">College Email Address *</label>
+                    <input type="email" id="email" class="form-control" placeholder="priya@student.edu" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="rollNumber">Roll / Student ID</label>
+                        <input type="text" id="rollNumber" class="form-control" placeholder="CS-2024-089">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="department">Department</label>
+                        <select id="department" class="form-control">
+                            <option value="Computer Science">Computer Science</option>
+                            <option value="Electronics">Electronics</option>
+                            <option value="Mechanical">Mechanical</option>
+                            <option value="Civil Engineering">Civil Engineering</option>
+                            <option value="Information Tech">Information Tech</option>
+                            <option value="Management Studies">Management Studies</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input type="password" id="password" class="form-control" placeholder="At least 6 characters" required minlength="6">
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password *</label>
+                    <input type="password" id="confirmPassword" class="form-control" placeholder="Re-enter password" required minlength="6">
+                </div>
+
+                <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                    Register Account
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--gray-600);">
+                Already registered? <a href="/login.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">Log in here</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 CampusEvents. College Event Management System.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/api.js"></script>
+    <script>
+        // Check if already logged in
+        async function checkAlreadyLoggedIn() {
+            const user = await getCurrentUser();
+            if (user) {
+                window.location.href = user.role === 'admin' ? '/admin-dashboard.html' : '/student-dashboard.html';
+            }
+        }
+        checkAlreadyLoggedIn();
+
+        // Form submission
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const roll_number = document.getElementById('rollNumber').value.trim();
+            const department = document.getElementById('department').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (password !== confirmPassword) {
+                showToast('Passwords do not match.', 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Registering...';
+
+            try {
+                const response = await apiRequest('/api/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        password,
+                        roll_number,
+                        department
+                    })
+                });
+
+                showToast(response.message, 'success');
+
+                setTimeout(() => {
+                    window.location.href = '/student-dashboard.html';
+                }, 800);
+            } catch (err) {
+                showToast(err.message, 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Register Account';
+            }
+        });
+    </script>
+</body>
+</html>

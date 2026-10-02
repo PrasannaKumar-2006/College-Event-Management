@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | CampusEvents</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <span class="brand-icon">🎓</span>
+                <span>CampusEvents</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/index.html">Upcoming Events</a></li>
+                <li><a href="/admin-dashboard.html" class="active">Admin Dashboard</a></li>
+                <span id="navAuthLinks"></span>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="container">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div class="dashboard-title">
+                <h2>Admin Control Center 🛡️</h2>
+                <p>Create, manage college events, and view registered student rosters</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-primary" id="openAddEventModalBtn">
+                    <span>➕</span> Add New Event
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📅</div>
+                <div class="stat-info">
+                    <h3 id="statTotalEvents">0</h3>
+                    <p>Total Events</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-info">
+                    <h3 id="statTotalRegistrations">0</h3>
+                    <p>Total Registrations</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🪑</div>
+                <div class="stat-info">
+                    <h3 id="statTotalSeats">0</h3>
+                    <p>Total Campus Seats</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Events Management Table Section -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-size: 1.3rem; color: var(--dark); font-weight: 700;">College Events Roster</h3>
+            <span style="font-size: 0.85rem; color: var(--gray-500);">Live seat counts and attendee tracking</span>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Event Details</th>
+                        <th>Department</th>
+                        <th>Date & Time</th>
+                        <th>Venue</th>
+                        <th>Seats & Bookings</th>
+                        <th style="text-align: right;">Management Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="adminEventsTbody">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem;">Loading events...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- 1. Add / Edit Event Modal -->
+    <div id="eventFormModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="eventModalTitle">Add New Event</h3>
+                <button type="button" class="modal-close" id="closeEventFormModal">&times;</button>
+            </div>
+            <form id="eventForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editEventId" value="">
+
+                    <div class="form-group">
+                        <label for="eventName">Event Name *</label>
+                        <input type="text" id="eventName" class="form-control" placeholder="e.g. AI & Machine Learning Summit" required>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label for="eventDepartment">Department *</label>
+                            <select id="eventDepartment" class="form-control" required>
+                                <option value="Computer Science">Computer Science</option>
+                                <option value="Electronics">Electronics</option>
+                                <option value="Mechanical">Mechanical</option>
+                                <option value="Cultural Affairs">Cultural Affairs</option>
+                                <option value="Physical Education">Physical Education</option>
+                                <option value="Civil Engineering">Civil Engineering</option>
+                                <option value="Management Studies">Management Studies</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="eventSeats">Total Seats Capacity *</label>
+                            <input type="number" id="eventSeats" class="form-control" placeholder="e.g. 60" min="1" required>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label for="eventDate">Event Date *</label>
+                            <input type="date" id="eventDate" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="eventTime">Event Time *</label>
+                            <input type="time" id="eventTime" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="eventVenue">Venue Location *</label>
+                        <input type="text" id="eventVenue" class="form-control" placeholder="e.g. Auditorium Hall A or Seminar Room 2" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="eventDescription">Description *</label>
+                        <textarea id="eventDescription" class="form-control" rows="4" placeholder="Briefly describe the event, rules, or agenda..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" id="cancelEventFormBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveEventBtn">Save Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Registered Attendees Modal -->
+    <div id="attendeesModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="attendeesModalTitle">Registered Students</h3>
+                    <p id="attendeesModalSubtitle" style="font-size: 0.85rem; color: var(--gray-500); margin-top: 0.2rem;"></p>
+                </div>
+                <button type="button" class="modal-close" id="closeAttendeesModal">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 0;">
+                <div class="table-container" style="box-shadow: none; border: none; margin-bottom: 0;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Student Name</th>
+                                <th>Email</th>
+                                <th>Roll Number</th>
+                                <th>Department</th>
+                                <th>Registered Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendeesTbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="closeAttendeesBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 CampusEvents. College Event Management System.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/api.js"></script>
+    <script>
+        let adminUser = null;
+        let eventsList = [];
+
+        // Check Admin Auth and initialize
+        async function initAdminDashboard() {
+            adminUser = await setupNavbar();
+
+            if (!adminUser) {
+                showToast('Please login as admin.', 'error');
+                setTimeout(() => window.location.href = '/login.html', 1000);
+                return;
+            }
+
+            if (adminUser.role !== 'admin') {
+                showToast('Access denied: Admin privileges required.', 'error');
+                setTimeout(() => window.location.href = '/student-dashboard.html', 1000);
+                return;
+            }
+
+            await loadAdminEvents();
+        }
+
+        // Fetch events and update table + stats
+        async function loadAdminEvents() {
+            const tbody = document.getElementById('adminEventsTbody');
+
+            try {
+                const res = await apiRequest('/api/events');
+                eventsList = res.events;
+
+                // Update summary stats
+                let totalRegistrations = 0;
+                let totalSeats = 0;
+
+                eventsList.forEach(e => {
+                    totalRegistrations += Number(e.registered_count || 0);
+                    totalSeats += Number(e.total_seats || 0);
+                });
+
+                document.getElementById('statTotalEvents').innerText = eventsList.length;
+                document.getElementById('statTotalRegistrations').innerText = totalRegistrations;
+                document.getElementById('statTotalSeats').innerText = totalSeats;
+
+                if (eventsList.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 2rem;">
+                                No events created yet. Click "Add New Event" to get started!
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = eventsList.map(evt => {
+                    const isFull = evt.available_seats <= 0;
+                    return `
+                        <tr>
+                            <td>
+                                <strong>${evt.name}</strong>
+                                <div style="font-size: 0.8rem; color: var(--gray-500); max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    ${evt.description}
+                                </div>
+                            </td>
+                            <td><span class="dept-badge">${evt.department}</span></td>
+                            <td>
+                                <div>📅 ${formatDate(evt.event_date)}</div>
+                                <div style="font-size: 0.8rem; color: var(--gray-500);">⏰ ${formatTime(evt.event_time)}</div>
+                            </td>
+                            <td>📍 ${evt.venue}</td>
+                            <td>
+                                <div style="font-weight: 600; font-size: 0.88rem; margin-bottom: 0.2rem;">
+                                    ${evt.registered_count} / ${evt.total_seats} booked
+                                </div>
+                                <span class="seat-status-badge ${isFull ? 'status-full' : 'status-available'}">
+                                    ${isFull ? 'Housefull' : `${evt.available_seats} remaining`}
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="table-actions" style="justify-content: flex-end;">
+                                    <button class="btn btn-outline btn-sm view-attendees-btn" data-id="${evt.id}" data-name="${evt.name}" data-seats="${evt.total_seats}">
+                                        👥 Attendees (${evt.registered_count})
+                                    </button>
+                                    <button class="btn btn-outline btn-sm edit-btn" data-id="${evt.id}">
+                                        ✏️ Edit
+                                    </button>
+                                    <button class="btn btn-danger-outline btn-sm delete-btn" data-id="${evt.id}" data-name="${evt.name}">
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                attachActionListeners();
+            } catch (err) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--danger); padding: 2rem;">
+                            Error loading events: ${err.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Action button listeners
+        function attachActionListeners() {
+            // View Attendees
+            document.querySelectorAll('.view-attendees-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const eventId = e.currentTarget.getAttribute('data-id');
+                    const eventName = e.currentTarget.getAttribute('data-name');
+                    const totalSeats = e.currentTarget.getAttribute('data-seats');
+                    openAttendeesModal(eventId, eventName, totalSeats);
+                });
+            });
+
+            // Edit Event
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const eventId = parseInt(e.currentTarget.getAttribute('data-id'), 10);
+                    openEditEventModal(eventId);
+                });
+            });
+
+            // Delete Event
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const eventId = e.currentTarget.getAttribute('data-id');
+                    const eventName = e.currentTarget.getAttribute('data-name');
+
+                    if (confirm(`Are you sure you want to delete event "${eventName}"?\nAll student registrations for this event will also be removed.`)) {
+                        await deleteEvent(eventId);
+                    }
+                });
+            });
+        }
+
+        // Open Add Event Modal
+        document.getElementById('openAddEventModalBtn').addEventListener('click', () => {
+            document.getElementById('eventForm').reset();
+            document.getElementById('editEventId').value = '';
+            document.getElementById('eventModalTitle').innerText = 'Add New College Event';
+            document.getElementById('eventFormModal').classList.add('active');
+        });
+
+        // Open Edit Event Modal
+        function openEditEventModal(eventId) {
+            const evt = eventsList.find(e => e.id === eventId);
+            if (!evt) return;
+
+            document.getElementById('editEventId').value = evt.id;
+            document.getElementById('eventName').value = evt.name;
+            document.getElementById('eventDepartment').value = evt.department;
+            document.getElementById('eventSeats').value = evt.total_seats;
+            // Format date for date picker YYYY-MM-DD
+            document.getElementById('eventDate').value = evt.event_date.split('T')[0];
+            // Format time HH:MM
+            document.getElementById('eventTime').value = evt.event_time.substring(0, 5);
+            document.getElementById('eventVenue').value = evt.venue;
+            document.getElementById('eventDescription').value = evt.description;
+
+            document.getElementById('eventModalTitle').innerText = 'Edit Event Details';
+            document.getElementById('eventFormModal').classList.add('active');
+        }
+
+        function closeEventFormModal() {
+            document.getElementById('eventFormModal').classList.remove('active');
+        }
+
+        document.getElementById('closeEventFormModal').addEventListener('click', closeEventFormModal);
+        document.getElementById('cancelEventFormBtn').addEventListener('click', closeEventFormModal);
+
+        // Submit Add / Edit Form
+        document.getElementById('eventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('editEventId').value;
+            const isEditing = Boolean(editId);
+
+            const payload = {
+                name: document.getElementById('eventName').value.trim(),
+                department: document.getElementById('eventDepartment').value,
+                seats: parseInt(document.getElementById('eventSeats').value, 10),
+                event_date: document.getElementById('eventDate').value,
+                event_time: document.getElementById('eventTime').value + ':00',
+                venue: document.getElementById('eventVenue').value.trim(),
+                description: document.getElementById('eventDescription').value.trim()
+            };
+
+            const saveBtn = document.getElementById('saveEventBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerText = 'Saving...';
+
+            try {
+                const url = isEditing ? `/api/events/${editId}` : '/api/events';
+                const method = isEditing ? 'PUT' : 'POST';
+
+                const res = await apiRequest(url, {
+                    method,
+                    body: JSON.stringify(payload)
+                });
+
+                showToast(res.message, 'success');
+                closeEventFormModal();
+                await loadAdminEvents();
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'Save Event';
+            }
+        });
+
+        // Delete Event
+        async function deleteEvent(eventId) {
+            try {
+                const res = await apiRequest(`/api/events/${eventId}`, { method: 'DELETE' });
+                showToast(res.message, 'success');
+                await loadAdminEvents();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // Open Registered Attendees Modal
+        async function openAttendeesModal(eventId, eventName, totalSeats) {
+            const modal = document.getElementById('attendeesModal');
+            const tbody = document.getElementById('attendeesTbody');
+            document.getElementById('attendeesModalTitle').innerText = eventName;
+            document.getElementById('attendeesModalSubtitle').innerText = 'Loading registered student roster...';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 1.5rem;">Loading attendees...</td></tr>';
+            modal.classList.add('active');
+
+            try {
+                const res = await apiRequest(`/api/events/${eventId}/attendees`);
+                const attendees = res.attendees;
+
+                document.getElementById('attendeesModalSubtitle').innerText = 
+                    `${attendees.length} of ${totalSeats} seats booked (${Math.max(0, totalSeats - attendees.length)} remaining)`;
+
+                if (attendees.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+                                No students have registered for this event yet.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = attendees.map((a, index) => `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><strong>${a.name}</strong></td>
+                        <td>${a.email}</td>
+                        <td>${a.roll_number || 'N/A'}</td>
+                        <td><span class="dept-badge">${a.department || 'N/A'}</span></td>
+                        <td>${formatDate(a.registered_at.split('T')[0] || a.registered_at.split(' ')[0])}</td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--danger); padding: 1.5rem;">
+                            Failed to load attendees: ${err.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function closeAttendeesModal() {
+            document.getElementById('attendeesModal').classList.remove('active');
+        }
+
+        document.getElementById('closeAttendeesModal').addEventListener('click', closeAttendeesModal);
+        document.getElementById('closeAttendeesBtn').addEventListener('click', closeAttendeesModal);
+
+        initAdminDashboard();
+    </script>
+</body>
+</html>

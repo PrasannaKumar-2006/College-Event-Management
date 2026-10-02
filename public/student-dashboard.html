@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard | CampusEvents</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <span class="brand-icon">🎓</span>
+                <span>CampusEvents</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/index.html">Upcoming Events</a></li>
+                <li><a href="/student-dashboard.html" class="active">My Dashboard</a></li>
+                <span id="navAuthLinks"></span>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="container">
+        <!-- Dashboard Greeting -->
+        <div class="dashboard-header">
+            <div class="dashboard-title">
+                <h2>Welcome, <span id="studentName">Student</span>! 👨‍🎓</h2>
+                <p id="studentInfo">Loading student details...</p>
+            </div>
+            <div>
+                <a href="/index.html" class="btn btn-primary">
+                    <span>🔍</span> Browse More Events
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🎟️</div>
+                <div class="stat-info">
+                    <h3 id="registeredCount">0</h3>
+                    <p>My Registered Events</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📅</div>
+                <div class="stat-info">
+                    <h3 id="upcomingCount">0</h3>
+                    <p>Total Campus Events</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Registered Events Section -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-size: 1.3rem; color: var(--dark); font-weight: 700;">My Registered Events</h3>
+            <span style="font-size: 0.85rem; color: var(--gray-500);">Your reserved event seats</span>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Event Name</th>
+                        <th>Department</th>
+                        <th>Date & Time</th>
+                        <th>Venue</th>
+                        <th>Registration Date</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="registeredEventsTbody">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem;">Loading your registered events...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 CampusEvents. College Event Management System.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/api.js"></script>
+    <script>
+        let currentUser = null;
+
+        // Ensure student authentication
+        async function initDashboard() {
+            currentUser = await setupNavbar();
+
+            if (!currentUser) {
+                showToast('Please log in to view your student dashboard.', 'error');
+                setTimeout(() => window.location.href = '/login.html', 1000);
+                return;
+            }
+
+            if (currentUser.role !== 'student') {
+                window.location.href = '/admin-dashboard.html';
+                return;
+            }
+
+            // Populate student info
+            document.getElementById('studentName').innerText = currentUser.name;
+            const roll = currentUser.roll_number ? `Roll: ${currentUser.roll_number} • ` : '';
+            const dept = currentUser.department || 'Department not specified';
+            document.getElementById('studentInfo').innerText = `${roll}${dept} • ${currentUser.email}`;
+
+            await loadRegisteredEvents();
+            await loadUpcomingCount();
+        }
+
+        // Fetch student's registered events
+        async function loadRegisteredEvents() {
+            const tbody = document.getElementById('registeredEventsTbody');
+
+            try {
+                const res = await apiRequest('/api/registrations/my-events');
+                const events = res.events;
+
+                document.getElementById('registeredCount').innerText = events.length;
+
+                if (events.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state" style="padding: 2.5rem 1rem;">
+                                    <div class="empty-state-icon">🎟️</div>
+                                    <h3>No events registered yet</h3>
+                                    <p>You haven't reserved seats for any upcoming events.</p>
+                                    <a href="/index.html" class="btn btn-primary btn-sm" style="margin-top: 0.75rem;">Explore Campus Events</a>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = events.map(evt => `
+                    <tr>
+                        <td>
+                            <strong>${evt.name}</strong>
+                            <p style="font-size: 0.8rem; color: var(--gray-500); margin-top: 0.2rem;">${evt.description ? evt.description.substring(0, 60) + '...' : ''}</p>
+                        </td>
+                        <td><span class="dept-badge">${evt.department}</span></td>
+                        <td>
+                            <div>📅 ${formatDate(evt.event_date)}</div>
+                            <div style="font-size: 0.8rem; color: var(--gray-500);">⏰ ${formatTime(evt.event_time)}</div>
+                        </td>
+                        <td>📍 ${evt.venue}</td>
+                        <td style="font-size: 0.85rem; color: var(--gray-500);">${formatDate(evt.registered_at.split('T')[0] || evt.registered_at.split(' ')[0])}</td>
+                        <td style="text-align: right;">
+                            <button class="btn btn-danger-outline btn-sm cancel-btn" data-event-id="${evt.event_id}" data-event-name="${evt.name}">
+                                Cancel Seat
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Attach Cancel listeners
+                document.querySelectorAll('.cancel-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const eventId = e.currentTarget.getAttribute('data-event-id');
+                        const eventName = e.currentTarget.getAttribute('data-event-name');
+
+                        if (confirm(`Are you sure you want to cancel your seat for "${eventName}"?`)) {
+                            await cancelRegistration(eventId);
+                        }
+                    });
+                });
+
+            } catch (error) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--danger); padding: 2rem;">
+                            Failed to load registered events: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Cancel registration
+        async function cancelRegistration(eventId) {
+            try {
+                const res = await apiRequest(`/api/registrations/${eventId}`, {
+                    method: 'DELETE'
+                });
+                showToast(res.message, 'success');
+                await loadRegisteredEvents();
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        // Get total events count
+        async function loadUpcomingCount() {
+            try {
+                const res = await apiRequest('/api/events');
+                document.getElementById('upcomingCount').innerText = res.events.length;
+            } catch (e) {}
+        }
+
+        initDashboard();
+    </script>
+</body>
+</html>

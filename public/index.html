@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusConnect | College Event Management System</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/index.html" class="brand">
+                <span class="brand-icon">🎓</span>
+                <span>CampusEvents</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/index.html" class="active">Upcoming Events</a></li>
+                <span id="navAuthLinks" style="display: flex; align-items: center; gap: 1rem;">
+                    <!-- Dynamically populated by setupNavbar() -->
+                </span>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="container">
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Discover & Join College Events</h1>
+            <p>Explore exciting hackathons, technical workshops, sports tournaments, and cultural fests happening across your campus.</p>
+            <div style="display: flex; justify-content: center; gap: 1rem;">
+                <a href="#eventsSection" class="btn" style="background: white; color: var(--primary);">Browse Events</a>
+                <a href="/register.html" class="btn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid white;">Create Student Account</a>
+            </div>
+        </section>
+
+        <!-- Filter & Search Controls -->
+        <section id="eventsSection">
+            <div class="filter-bar">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Search event by name, venue...">
+                </div>
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <label for="departmentFilter" style="font-weight: 600; font-size: 0.9rem;">Department:</label>
+                    <select id="departmentFilter" class="filter-select">
+                        <option value="ALL">All Departments</option>
+                        <option value="Computer Science">Computer Science</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Cultural Affairs">Cultural Affairs</option>
+                        <option value="Physical Education">Physical Education</option>
+                        <option value="Mechanical">Mechanical</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Events Grid -->
+            <div id="eventsContainer" class="events-grid">
+                <div class="empty-state">
+                    <div class="empty-state-icon">⏳</div>
+                    <h3>Loading college events...</h3>
+                    <p>Fetching scheduled campus activities.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Event Details Modal -->
+    <div id="eventDetailsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalEventTitle">Event Details</h3>
+                <button type="button" class="modal-close" id="closeDetailsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <span id="modalDeptBadge" class="dept-badge">Department</span>
+                </div>
+                <p id="modalEventDesc" style="margin-bottom: 1.5rem; line-height: 1.6; color: var(--gray-700);"></p>
+                <div class="event-meta">
+                    <div class="meta-item">
+                        <span class="meta-icon">📅</span>
+                        <span><strong>Date:</strong> <span id="modalEventDate"></span></span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-icon">⏰</span>
+                        <span><strong>Time:</strong> <span id="modalEventTime"></span></span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-icon">📍</span>
+                        <span><strong>Venue:</strong> <span id="modalEventVenue"></span></span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-icon">👥</span>
+                        <span><strong>Capacity:</strong> <span id="modalEventSeats"></span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="closeDetailsBtn">Close</button>
+                <div id="modalActionContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 CampusEvents - College Event Management System. Built for students & faculty.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/api.js"></script>
+    <script>
+        let allEvents = [];
+        let currentUser = null;
+
+        // Load and render events
+        async function loadEvents() {
+            currentUser = await setupNavbar();
+            const container = document.getElementById('eventsContainer');
+
+            try {
+                const response = await apiRequest('/api/events');
+                allEvents = response.events;
+                renderEvents();
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3>Failed to load events</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Render events list based on search and filters
+        function renderEvents() {
+            const container = document.getElementById('eventsContainer');
+            const searchVal = document.getElementById('searchInput').value.trim().toLowerCase();
+            const deptVal = document.getElementById('departmentFilter').value;
+
+            const filtered = allEvents.filter(evt => {
+                const matchesSearch = evt.name.toLowerCase().includes(searchVal) ||
+                                      evt.venue.toLowerCase().includes(searchVal) ||
+                                      evt.description.toLowerCase().includes(searchVal);
+                const matchesDept = (deptVal === 'ALL') || (evt.department === deptVal);
+                return matchesSearch && matchesDept;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <h3>No events found</h3>
+                        <p>Try clearing your search keyword or changing the department filter.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(evt => {
+                const isFull = evt.available_seats <= 0;
+                const percentBooked = Math.min(100, Math.round((evt.registered_count / evt.total_seats) * 100));
+
+                let actionButtonHtml = '';
+
+                if (!currentUser) {
+                    actionButtonHtml = `<a href="/login.html" class="btn btn-outline btn-sm">Login to Register</a>`;
+                } else if (currentUser.role === 'admin') {
+                    actionButtonHtml = `<a href="/admin-dashboard.html" class="btn btn-outline btn-sm">Manage in Admin</a>`;
+                } else if (evt.is_registered) {
+                    actionButtonHtml = `<button class="btn btn-success btn-sm" disabled>✓ Registered</button>`;
+                } else if (isFull) {
+                    actionButtonHtml = `<button class="btn btn-danger btn-sm" disabled>Seats Full</button>`;
+                } else {
+                    actionButtonHtml = `<button class="btn btn-primary btn-sm register-btn" data-event-id="${evt.id}">Register Now</button>`;
+                }
+
+                return `
+                    <article class="event-card">
+                        <div class="card-header">
+                            <span class="dept-badge">${evt.department}</span>
+                            <span class="seat-status-badge ${isFull ? 'status-full' : 'status-available'}">
+                                ${isFull ? 'Full' : `${evt.available_seats} seats left`}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <h3 class="event-title">${evt.name}</h3>
+                            <p class="event-desc">${evt.description}</p>
+                            
+                            <div class="event-meta">
+                                <div class="meta-item">
+                                    <span class="meta-icon">📅</span>
+                                    <span>${formatDate(evt.event_date)}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-icon">⏰</span>
+                                    <span>${formatTime(evt.event_time)}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-icon">📍</span>
+                                    <span>${evt.venue}</span>
+                                </div>
+                            </div>
+
+                            <div class="seat-progress-container">
+                                <div class="seat-progress-label">
+                                    <span>Seats Booked: ${evt.registered_count} / ${evt.total_seats}</span>
+                                    <span>${percentBooked}%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill ${isFull ? 'danger' : ''}" style="width: ${percentBooked}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button type="button" class="btn btn-outline btn-sm view-details-btn" data-event-id="${evt.id}">Details</button>
+                            ${actionButtonHtml}
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+            // Attach event listeners for Register buttons
+            document.querySelectorAll('.register-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const eventId = e.currentTarget.getAttribute('data-event-id');
+                    await handleRegister(eventId, e.currentTarget);
+                });
+            });
+
+            // Attach event listeners for Details buttons
+            document.querySelectorAll('.view-details-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const eventId = parseInt(e.currentTarget.getAttribute('data-event-id'), 10);
+                    openDetailsModal(eventId);
+                });
+            });
+        }
+
+        // Student event registration handler
+        async function handleRegister(eventId, btnElement) {
+            btnElement.disabled = true;
+            btnElement.innerText = 'Registering...';
+
+            try {
+                const res = await apiRequest(`/api/registrations/${eventId}`, { method: 'POST' });
+                showToast(res.message, 'success');
+                // Reload events to refresh availability and button state
+                await loadEvents();
+            } catch (error) {
+                showToast(error.message, 'error');
+                btnElement.disabled = false;
+                btnElement.innerText = 'Register Now';
+            }
+        }
+
+        // Open details modal
+        function openDetailsModal(eventId) {
+            const evt = allEvents.find(e => e.id === eventId);
+            if (!evt) return;
+
+            document.getElementById('modalEventTitle').innerText = evt.name;
+            document.getElementById('modalDeptBadge').innerText = evt.department;
+            document.getElementById('modalEventDesc').innerText = evt.description;
+            document.getElementById('modalEventDate').innerText = formatDate(evt.event_date);
+            document.getElementById('modalEventTime').innerText = formatTime(evt.event_time);
+            document.getElementById('modalEventVenue').innerText = evt.venue;
+            document.getElementById('modalEventSeats').innerText = `${evt.registered_count} booked of ${evt.total_seats} seats (${evt.available_seats} available)`;
+
+            const actionContainer = document.getElementById('modalActionContainer');
+            if (!currentUser) {
+                actionContainer.innerHTML = `<a href="/login.html" class="btn btn-primary btn-sm">Login to Register</a>`;
+            } else if (currentUser.role === 'student') {
+                if (evt.is_registered) {
+                    actionContainer.innerHTML = `<button class="btn btn-success btn-sm" disabled>✓ Registered</button>`;
+                } else if (evt.available_seats <= 0) {
+                    actionContainer.innerHTML = `<button class="btn btn-danger btn-sm" disabled>Seats Full</button>`;
+                } else {
+                    actionContainer.innerHTML = `<button class="btn btn-primary btn-sm" id="modalRegisterBtn">Register Now</button>`;
+                    document.getElementById('modalRegisterBtn').addEventListener('click', async () => {
+                        closeModal();
+                        await handleRegister(evt.id, { disabled: false, innerText: '' });
+                    });
+                }
+            } else {
+                actionContainer.innerHTML = '';
+            }
+
+            document.getElementById('eventDetailsModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('eventDetailsModal').classList.remove('active');
+        }
+
+        document.getElementById('closeDetailsModal').addEventListener('click', closeModal);
+        document.getElementById('closeDetailsBtn').addEventListener('click', closeModal);
+        document.getElementById('searchInput').addEventListener('input', renderEvents);
+        document.getElementById('departmentFilter').addEventListener('change', renderEvents);
+
+        // Initial fetch
+        loadEvents();
+    </script>
+</body>
+</html>
